@@ -1,0 +1,6 @@
+{
+  "username": "your_username",
+  "local_dir": "/path/to/local/dir",
+  "remote_host": "remote_host",
+  "remote_dir": "/path/to/remote/dir"
+}
