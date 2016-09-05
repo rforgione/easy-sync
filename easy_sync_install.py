@@ -1,8 +1,7 @@
-#!/usr/bin/env python
-
 from __future__ import print_function
 import subprocess
 import argparse
+from utilities import run_shell_cmd
 
 parser = argparse.ArgumentParser(description="Install easy-sync script.")
 parser.add_argument("--config", dest="config", help="Location of the JSON config file.")
@@ -10,9 +9,9 @@ parser.add_argument("--debug", dest="debug", action="store_const", const=True, d
 
 args = parser.parse_args()
 
-BASEDIR = subprocess.check_output("echo $(git rev-parse --show-toplevel)", shell=True).strip()
-USERNAME = subprocess.check_output("echo $USER", shell=True).strip()
-HOME = subprocess.check_output("echo $HOME", shell=True).strip()
+BASEDIR = run_shell_cmd("echo $(git rev-parse --show-toplevel)")
+USERNAME = run_shell_cmd("echo $USER")
+HOME = run_shell_cmd("echo $HOME")
 
 FSWATCH_FULL = subprocess.check_output("which fswatch", shell=True).strip()
 RSYNC_FULL = subprocess.check_output("which rsync", shell=True).strip()

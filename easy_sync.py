@@ -1,7 +1,6 @@
 import json
-import os
-import subprocess
 import argparse
+from utilities import run_shell_cmd
 
 parser = argparse.ArgumentParser(description="Install easy-sync script.")
 
@@ -28,15 +27,9 @@ xargs_cmd = "%s -n1 -I {}" % XARGS
 rsync_cmd = "%s -aziP --exclude=*.csv,*.tsv '%s/' '%s'" % (RSYNC, config["local_dir"], sync_location)
 full_cmd = " ".join([fswatch_cmd, "|", xargs_cmd, rsync_cmd])
 
-def run_shell_cmd(cmd, return_code=False):
-    if return_code:
-        return subprocess.call(cmd, shell=True)
-    else:
-        return subprocess.check_output(cmd, shell=True).strip()
-
 def listen_for_changes():
     run_shell_cmd(fswatch_cmd)
-    print run_shell_cmd(rsync_cmd)
+    run_shell_cmd(rsync_cmd)
     listen_for_changes()
 
 if __name__ == "__main__":
