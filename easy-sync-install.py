@@ -4,15 +4,24 @@ import argparse
 
 parser = argparse.ArgumentParser(description="Install easy-sync script.")
 parser.add_argument("--config", dest="config", help="Location of the JSON config file.")
+parser.add_argument("--debug", dest="debug", action="store_const", const=True, default=False)
 
 args = parser.parse_args()
 
 BASEDIR = subprocess.check_output("echo $(git rev-parse --show-toplevel)", shell=True).strip()
 USERNAME = subprocess.check_output("echo $USER", shell=True).strip()
-PYTHON_INSTALL_LOCATION = subprocess.check_output("which python", shell=True).strip()
 HOME = subprocess.check_output("echo $HOME", shell=True).strip()
 
-PYTHON_SCRIPT_LOCATION = BASEDIR + "/remote_sync.py"
+FSWATCH_FULL = subprocess.check_output("which fswatch", shell=True).strip()
+RSYNC_FULL = subprocess.check_output("which rsync", shell=True).strip()
+XARGS_FULL = subprocess.check_output("which xargs", shell=True).strip()
+
+PYTHON_INSTALL_LOCATION = subprocess.check_output("which python", shell=True).strip()
+PYTHON_SCRIPT_LOCATION = BASEDIR + "/easy_sync.py"
+
+PLIST_NAME = "org.%s.easysync" % USERNAME
+PLIST_LOC = subprocess.check_output("echo $HOME", shell=True).strip() +\
+	"/Library/LaunchAgents/%s.plist" % PLIST_NAME
 
 base_str = """
 <?xml version="1.0" encoding="UTF-8"?>
@@ -20,17 +29,45 @@ base_str = """
 <plist version="1.0">
 	<dict>
 		<key>Label</key>
-		<string>remote-sync</string>
-		<key>Program</key>
-        <string>%s</string>
 		<string>%s</string>
-        <string>%s</string>
+		<key>ProgramArguments</key>
+			<array>
+		        <string>%s</string>
+				<string>%s</string>
+		        <string>%s</string>
+		        <string>%s</string>
+		        <string>%s</string>
+				<string>%s</string>
+		        <string>%s</string>
+				<string>%s</string>
+		        <string>%s</string>
+				<string>%s</string>
+			</array>
 		<key>RunAtLoad</key>
 		<true/>
+		<key>KeepAlive</key>
+		<true/>
+		<key>StandardErrorPath</key>
+		<string>/tmp/easysync.err</string>
+		<key>StandardOutPath</key>
+		<string>/tmp/easysync.out</string>
 	</dict>
 </plist>
-""" % (PYTHON_INSTALL_LOCATION, PYTHON_SCRIPT_LOCATION, args.config)
+""" % (PLIST_NAME,
+	   PYTHON_INSTALL_LOCATION,
+	   PYTHON_SCRIPT_LOCATION,
+	   "--config",
+	   args.config,
+	   "--fswatch",
+	   FSWATCH_FULL,
+	   "--rsync",
+	   RSYNC_FULL,
+	   "--xargs",
+	   XARGS_FULL)
 
-with open(subprocess.check_output("echo $HOME", shell=True).strip() + "/Library/LaunchAgents/org.%s.remotesync.plist" % USERNAME, "w+") as f:
-    print(base_str, file=f)
-    f.close()
+if args.debug:
+	print("Would have written: %s" % base_str)
+else:
+	with open(PLIST_LOC, "w+") as f:
+	    print(base_str, file=f)
+	    f.close()
