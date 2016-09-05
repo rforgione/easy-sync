@@ -23,11 +23,21 @@ with open(CONFIG) as f:
 
 sync_location = "".join([config["username"],"@",config["remote_host"],":",config["remote_dir"]])
 
-fswatch_cmd = "%s -o %s" % (FSWATCH, config["local_dir"])
+fswatch_cmd = "%s -1 %s" % (FSWATCH, config["local_dir"])
 xargs_cmd = "%s -n1 -I {}" % XARGS
-rsync_cmd = "%s -azP --exclude=*.csv,*.tsv '%s/' '%s'" % (RSYNC, config["local_dir"], sync_location)
+rsync_cmd = "%s -aziP --exclude=*.csv,*.tsv '%s/' '%s'" % (RSYNC, config["local_dir"], sync_location)
 full_cmd = " ".join([fswatch_cmd, "|", xargs_cmd, rsync_cmd])
 
-# run rsync once for an initial sync, and then begin listening for changes
-subprocess.call(rsync_cmd, shell=True)
-subprocess.call(full_cmd, shell=True)
+def run_shell_cmd(cmd, return_code=False):
+    if return_code:
+        return subprocess.call(cmd, shell=True)
+    else:
+        return subprocess.check_output(cmd, shell=True).strip()
+
+def listen_for_changes():
+    run_shell_cmd(fswatch_cmd)
+    print run_shell_cmd(rsync_cmd)
+    listen_for_changes()
+
+if __name__ == "__main__":
+    listen_for_changes()
