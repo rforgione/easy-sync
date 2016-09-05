@@ -1,5 +1,4 @@
 from __future__ import print_function
-import subprocess
 import argparse
 from utilities import run_shell_cmd
 
@@ -13,16 +12,13 @@ args = parser.parse_args()
 BASEDIR = run_shell_cmd("echo $(git rev-parse --show-toplevel)")
 USERNAME = run_shell_cmd("echo $USER")
 HOME = run_shell_cmd("echo $HOME")
-
-FSWATCH_FULL = subprocess.check_output("which fswatch", shell=True).strip()
-RSYNC_FULL = subprocess.check_output("which rsync", shell=True).strip()
-XARGS_FULL = subprocess.check_output("which xargs", shell=True).strip()
-
-PYTHON_INSTALL_LOCATION = subprocess.check_output("which python", shell=True).strip()
+FSWATCH_FULL = run_shell_cmd("which fswatch")
+RSYNC_FULL = run_shell_cmd("which rsync")
+XARGS_FULL = run_shell_cmd("which xargs")
+PYTHON_INSTALL_LOCATION = run_shell_cmd("which python", shell=True)
 PYTHON_SCRIPT_LOCATION = BASEDIR + "/easy_sync.py"
-
 PLIST_NAME = "org.%s.easysync" % USERNAME
-PLIST_LOC = subprocess.check_output("echo $HOME", shell=True).strip() +\
+PLIST_LOC = run_shell_cmd("echo $HOME") +\
 	"/Library/LaunchAgents/%s.plist" % PLIST_NAME
 
 notify_str = "<string>--notify</string>" if args.notify else ""
