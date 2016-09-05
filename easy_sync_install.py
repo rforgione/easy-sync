@@ -5,6 +5,7 @@ from utilities import run_shell_cmd
 
 parser = argparse.ArgumentParser(description="Install easy-sync script.")
 parser.add_argument("--config", dest="config", help="Location of the JSON config file.")
+parser.add_argument("--notify", dest="notify", action="store_const", const=True, default=False)
 parser.add_argument("--debug", dest="debug", action="store_const", const=True, default=False)
 
 args = parser.parse_args()
@@ -23,6 +24,8 @@ PYTHON_SCRIPT_LOCATION = BASEDIR + "/easy_sync.py"
 PLIST_NAME = "org.%s.easysync" % USERNAME
 PLIST_LOC = subprocess.check_output("echo $HOME", shell=True).strip() +\
 	"/Library/LaunchAgents/%s.plist" % PLIST_NAME
+
+notify_str = "<string>--notify</string>" if args.notify else ""
 
 base_str = """
 <?xml version="1.0" encoding="UTF-8"?>
@@ -43,6 +46,7 @@ base_str = """
 				<string>%s</string>
 		        <string>%s</string>
 				<string>%s</string>
+				%s
 			</array>
 		<key>RunAtLoad</key>
 		<true/>
@@ -64,7 +68,8 @@ base_str = """
 	   "--rsync",
 	   RSYNC_FULL,
 	   "--xargs",
-	   XARGS_FULL)
+	   XARGS_FULL,
+	   notify_str)
 
 if args.debug:
 	print("Would have written: %s" % base_str)

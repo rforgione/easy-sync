@@ -8,6 +8,8 @@ parser.add_argument("--config", dest="config", help="Location of the JSON config
 parser.add_argument("--fswatch", dest="fswatch_loc", help="Location of system fswatch.")
 parser.add_argument("--rsync", dest="rsync_loc", help="Location of system rsync.")
 parser.add_argument("--xargs", dest="xargs_loc", help="Location of system xargs.")
+parser.add_argument("--notify", dest="notify", action="store_const", const=True,
+    default=False, help="Whether or not to show a notification upon sync.")
 
 args = parser.parse_args()
 
@@ -27,10 +29,17 @@ xargs_cmd = "%s -n1 -I {}" % XARGS
 rsync_cmd = "%s -aziP --exclude=*.csv,*.tsv '%s/' '%s'" % (RSYNC, config["local_dir"], sync_location)
 full_cmd = " ".join([fswatch_cmd, "|", xargs_cmd, rsync_cmd])
 
-def listen_for_changes():
+def listen_for_changes(notify=False):
     run_shell_cmd(fswatch_cmd)
-    run_shell_cmd(rsync_cmd)
+    output = run_shell_cmd(rsync_cmd, return_code=True)
+
+    if notify:
+        if output == 0:
+            run_shell_cmd("terminal-notifier -message \"Sync successful.\"")
+        else:
+            run_shell_cmd("terminal-notifier -message \"Sync failed -- check your configuration.\"")
+
     listen_for_changes()
 
-if __name__ == "__main__":
-    listen_for_changes()
+while True:
+    listen_for_changes(args.notify)
