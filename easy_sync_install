@@ -1,0 +1,6 @@
+if [ ! -d "~/bin" ]; then
+  mkdir "~/bin"
+fi
+
+cp easy_sync.py ~/bin
+chmod +x ~/bin/easy_sync.py

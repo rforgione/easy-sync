@@ -44,6 +44,9 @@ def align_remote_branch(config):
 # Returns:
 #   if return_code is True, returns the return code. Otherwise
 #   returns the output from the command.
+#
+# A wrapper around two functions in the subprocess library
+# that gives an easy interface for running shell commands.
 def run_shell_cmd(cmd, return_code=False):
     if return_code:
         return subprocess.call(cmd, shell=True)
