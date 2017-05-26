@@ -3,12 +3,16 @@
 import json
 import argparse
 import subprocess
+import os
 
 parser = argparse.ArgumentParser(description="Create a loop that listens for changes and syncs them to a remote directory.")
 
-parser.add_argument("--config", dest="config", help="Location of the JSON config file.")
-parser.add_argument("--fswatch", dest="fswatch_loc", help="Location of system fswatch.")
-parser.add_argument("--rsync", dest="rsync_loc", help="Location of system rsync.")
+parser.add_argument("--config", dest="config", nargs="?", default="./sync.json",
+    help="Location of the JSON config file.")
+parser.add_argument("--fswatch", dest="fswatch_loc",
+    help="Location of system fswatch.")
+parser.add_argument("--rsync", dest="rsync_loc",
+    help="Location of system rsync.")
 
 args = parser.parse_args()
 
@@ -33,10 +37,15 @@ rsync_cmd = "%s -aziP --exclude=\"*.csv\" --exclude=\"*.tsv\" --exclude=\".git/\
 #   repository
 def align_remote_branch(config):
     remote_branch = run_shell_cmd("ssh {} git -C {} rev-parse --abbrev-ref HEAD".format(config["remote_host"], config["remote_dir"]))
-    current_branch = run_shell_cmd("git rev-parse --abrev-ref HEAD")
+    current_branch = run_shell_cmd("git rev-parse --abbrev-ref HEAD")
 
     if current_branch != remote_branch:
-        run_shell_cmd("ssh {} git -C {} reset --hard && git checkout {}".format(config["remote_host"], config["remote_dir"], current_branch))
+        run_shell_cmd("ssh {} git -C {} reset --hard".\
+            format(config["remote_host"], config["remote_dir"]))
+        run_shell_cmd("ssh {} git -C {} checkout {}".\
+            format(config["remote_host"], config["remote_dir"], current_branch))
+        run_shell_cmd("ssh {} git -C {} pull --rebase origin {}".\
+            format(config["remote_host"], config["remote_dir"], current_branch))
 
 # Arguments:
 #   cmd: string, the shell command you want to run
@@ -66,11 +75,9 @@ def listen_for_changes(config, align_branches=False):
     if align_branches:
         align_remote_branch(config)
 
-    run_shell_cmd(rsync_cmd)
-    run_shell_cmd(fswatch_cmd)
-
-    # recursively call to create event listening loop
-    listen_for_changes(config)
+    run_shell_cmd(" ".join([fswatch_cmd, "| xargs -0 -I \{\}", rsync_cmd]), return_code=True)
+    # run_shell_cmd(rsync_cmd, return_code=True)
+    # run_shell_cmd(fswatch_cmd)
 
 while True:
     listen_for_changes(config, align_branches=True)

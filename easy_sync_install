@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 
-if [ ! -d "~/bin" ]; then
-  mkdir "~/bin"
+if [ ! -d ~/bin ]; then
+  mkdir ~/bin
 fi
 
 cp easy_sync.py ~/bin
