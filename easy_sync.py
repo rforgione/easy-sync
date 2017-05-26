@@ -37,13 +37,26 @@ rsync_cmd = "%s -aziP --exclude=\"*.csv\" --exclude=\"*.tsv\" --exclude=\".git/\
 #   repository
 def align_remote_branch(config):
     remote_branch = run_shell_cmd("ssh {} git -C {} rev-parse --abbrev-ref HEAD".format(config["remote_host"], config["remote_dir"]))
-    current_branch = run_shell_cmd("git rev-parse --abbrev-ref HEAD")
+    current_branch = run_shell_cmd("git -C {} rev-parse --abbrev-ref HEAD".format(config["local_dir"]))
 
     if current_branch != remote_branch:
+        # reset the remote branch
         run_shell_cmd("ssh {} git -C {} reset --hard".\
             format(config["remote_host"], config["remote_dir"]))
-        run_shell_cmd("ssh {} git -C {} checkout {}".\
+
+        # download remote branch data
+        run_shell_cmd("ssh {} git -C {} fetch".\
             format(config["remote_host"], config["remote_dir"], current_branch))
+
+        # checkout remote branch
+        run_shell_cmd("ssh {} git -C {} checkout -f {}".\
+            format(config["remote_host"], config["remote_dir"], current_branch))
+
+        # checkout remote branch
+        run_shell_cmd("ssh {} git -C {} clean -fd".\
+            format(config["remote_host"], config["remote_dir"]))
+
+        # pull with rebase from github
         run_shell_cmd("ssh {} git -C {} pull --rebase origin {}".\
             format(config["remote_host"], config["remote_dir"], current_branch))
 
@@ -73,11 +86,12 @@ def listen_for_changes(config, align_branches=False):
     # align local branch with remote to make sure we're editing the same
     # branch on both
     if align_branches:
+        print "Aligning branches..."
         align_remote_branch(config)
 
-    run_shell_cmd(" ".join([fswatch_cmd, "| xargs -0 -I \{\}", rsync_cmd]), return_code=True)
+    while True:
+        run_shell_cmd(" ".join([fswatch_cmd, "| xargs -0 -I {}", rsync_cmd]), return_code=True)
     # run_shell_cmd(rsync_cmd, return_code=True)
     # run_shell_cmd(fswatch_cmd)
 
-while True:
-    listen_for_changes(config, align_branches=True)
+listen_for_changes(config, align_branches=True)
