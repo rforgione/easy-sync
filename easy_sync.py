@@ -53,7 +53,7 @@ def align_remote_branch(config):
     current_branch = run_shell_cmd("git rev-parse --abrev-ref HEAD")
 
     if current_branch != remote_branch:
-        run_shell_cmd("ssh {} git -C {} reset --hard && git checkout {}")
+        run_shell_cmd("ssh {} git -C {} reset --hard && git checkout {}".format(config["remote_host"], config["remote_dir"], current_branch))
 
 while True:
     listen_for_changes(config, align_branches=True)
