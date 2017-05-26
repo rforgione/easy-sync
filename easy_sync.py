@@ -1,6 +1,6 @@
 import json
 import argparse
-from utilities import run_shell_cmd
+import subprocess
 
 parser = argparse.ArgumentParser(description="Create a loop that listens for changes and syncs them to a remote directory.")
 
@@ -25,6 +25,32 @@ fswatch_cmd = "%s -1 %s" % (FSWATCH, config["local_dir"])
 rsync_cmd = "%s -aziP --exclude=\"*.csv\" --exclude=\"*.tsv\" --exclude=\".git/\" --exclude=\"*.npy\" '%s/' '%s'" % (RSYNC, config["local_dir"], sync_location)
 
 # Arguments:
+#   config: dict, contains the sync configuration dict
+#
+# Description: aligns the current branch of the local repository and the remote
+#   repository
+def align_remote_branch(config):
+    remote_branch = run_shell_cmd("ssh {} git -C {} rev-parse --abbrev-ref HEAD".format(config["remote_host"], config["remote_dir"]))
+    current_branch = run_shell_cmd("git rev-parse --abrev-ref HEAD")
+
+    if current_branch != remote_branch:
+        run_shell_cmd("ssh {} git -C {} reset --hard && git checkout {}".format(config["remote_host"], config["remote_dir"], current_branch))
+
+# Arguments:
+#   cmd: string, the shell command you want to run
+#   return_code: bool, whether or not you want to return
+#     the command's return code. If False, will return the
+#     output of the command.
+# Returns:
+#   if return_code is True, returns the return code. Otherwise
+#   returns the output from the command.
+def run_shell_cmd(cmd, return_code=False):
+    if return_code:
+        return subprocess.call(cmd, shell=True)
+    else:
+        return subprocess.check_output(cmd, shell=True).strip()
+
+# Arguments:
 #   config: dict, contains the sync configuration contained
 #     in sync.json
 #
@@ -42,18 +68,6 @@ def listen_for_changes(config, align_branches=False):
 
     # recursively call to create event listening loop
     listen_for_changes(config)
-
-# Arguments:
-#   config: dict, contains the sync configuration dict
-#
-# Description: aligns the current branch of the local repository and the remote
-#   repository
-def align_remote_branch(config):
-    remote_branch = run_shell_cmd("ssh {} git -C {} rev-parse --abbrev-ref HEAD".format(config["remote_host"], config["remote_dir"]))
-    current_branch = run_shell_cmd("git rev-parse --abrev-ref HEAD")
-
-    if current_branch != remote_branch:
-        run_shell_cmd("ssh {} git -C {} reset --hard && git checkout {}".format(config["remote_host"], config["remote_dir"], current_branch))
 
 while True:
     listen_for_changes(config, align_branches=True)
