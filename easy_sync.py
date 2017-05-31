@@ -3,16 +3,16 @@
 import json
 import argparse
 import subprocess
-import os
 
-parser = argparse.ArgumentParser(description="Create a loop that listens for changes and syncs them to a remote directory.")
+parser = argparse.ArgumentParser(description="Create a loop that listens for changes " +
+                                             "and syncs them to a remote directory.")
 
 parser.add_argument("--config", dest="config", nargs="?", default="./sync.json",
-    help="Location of the JSON config file.")
+                    help="Location of the JSON config file.")
 parser.add_argument("--fswatch", dest="fswatch_loc",
-    help="Location of system fswatch.")
+                    help="Location of system fswatch.")
 parser.add_argument("--rsync", dest="rsync_loc",
-    help="Location of system rsync.")
+                    help="Location of system rsync.")
 
 args = parser.parse_args()
 
@@ -25,10 +25,17 @@ if CONFIG:
         config = json.loads(f.read())
         f.close()
 
-sync_location = "".join([config["username"],"@",config["remote_host"],":",config["remote_dir"]])
+sync_location = "".join([config["username"], "@", config["remote_host"], ":", config["remote_dir"]])
 
 fswatch_cmd = "%s -1 %s" % (FSWATCH, config["local_dir"])
-rsync_cmd = "%s -aziP --exclude=\"*.csv\" --exclude=\"*.tsv\" --exclude=\".git/\" --exclude=\"*.npy\" '%s/' '%s'" % (RSYNC, config["local_dir"], sync_location)
+rsync_cmd = ("{} -aziP ".format(RSYNC) +
+             "--exclude=\".git/\" " +
+             "--exclude=\"*.csv\" " +
+             "--exclude=\"*.tsv\" " +
+             "--exclude=\"*.npy\" " +
+             "--exclude=\"*.jar\" " +
+             "'{}' '{}/'".format(config["local_dir"], sync_location))
+
 
 # Arguments:
 #   config: dict, contains the sync configuration dict
@@ -36,29 +43,29 @@ rsync_cmd = "%s -aziP --exclude=\"*.csv\" --exclude=\"*.tsv\" --exclude=\".git/\
 # Description: aligns the current branch of the local repository and the remote
 #   repository
 def align_remote_branch(config):
-    remote_branch = run_shell_cmd("ssh {} git -C {} rev-parse --abbrev-ref HEAD".format(config["remote_host"], config["remote_dir"]))
+    remote_branch = run_shell_cmd("ssh {} git -C {} rev-parse --abbrev-ref HEAD".format(config["remote_host"],
+                                                                                        config["remote_dir"]))
+
     current_branch = run_shell_cmd("git -C {} rev-parse --abbrev-ref HEAD".format(config["local_dir"]))
 
     if current_branch != remote_branch:
+        cmd_prefix = "ssh {} git -C {} ".format(config["remote_host"], config["remote_dir"])
+
         # reset the remote branch
-        run_shell_cmd("ssh {} git -C {} reset --hard".\
-            format(config["remote_host"], config["remote_dir"]))
+        run_shell_cmd(cmd_prefix+"reset --hard")
 
         # download remote branch data
-        run_shell_cmd("ssh {} git -C {} fetch".\
-            format(config["remote_host"], config["remote_dir"], current_branch))
+        run_shell_cmd(cmd_prefix+"fetch origin {}".format(current_branch))
 
         # checkout remote branch
-        run_shell_cmd("ssh {} git -C {} checkout -f {}".\
-            format(config["remote_host"], config["remote_dir"], current_branch))
+        run_shell_cmd(cmd_prefix+"checkout -f {}".format(current_branch))
 
         # checkout remote branch
-        run_shell_cmd("ssh {} git -C {} clean -fd".\
-            format(config["remote_host"], config["remote_dir"]))
+        run_shell_cmd(cmd_prefix+"clean -fd")
 
         # pull with rebase from github
-        run_shell_cmd("ssh {} git -C {} pull --rebase origin {}".\
-            format(config["remote_host"], config["remote_dir"], current_branch))
+        run_shell_cmd(cmd_prefix+"pull --rebase origin {}".format(current_branch))
+
 
 # Arguments:
 #   cmd: string, the shell command you want to run
@@ -74,6 +81,7 @@ def run_shell_cmd(cmd, return_code=False):
         return subprocess.call(cmd, shell=True)
     else:
         return subprocess.check_output(cmd, shell=True).strip()
+
 
 # Arguments:
 #   config: dict, contains the sync configuration contained
@@ -91,7 +99,5 @@ def listen_for_changes(config, align_branches=False):
 
     while True:
         run_shell_cmd(" ".join([fswatch_cmd, "| xargs -0 -I {}", rsync_cmd]), return_code=True)
-    # run_shell_cmd(rsync_cmd, return_code=True)
-    # run_shell_cmd(fswatch_cmd)
 
 listen_for_changes(config, align_branches=True)
