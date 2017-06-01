@@ -34,7 +34,7 @@ rsync_cmd = ("{} -aziP ".format(RSYNC) +
              "--exclude=\"*.tsv\" " +
              "--exclude=\"*.npy\" " +
              "--exclude=\"*.jar\" " +
-             "'{}' '{}/'".format(config["local_dir"], sync_location))
+             "{}/ {}/".format(config["local_dir"], sync_location))
 
 
 # Arguments:
@@ -50,6 +50,8 @@ def align_remote_branch(config):
 
     if current_branch != remote_branch:
         cmd_prefix = "ssh {} git -C {} ".format(config["remote_host"], config["remote_dir"])
+
+        print "Cleaning remote branch..."
 
         # reset the remote branch
         run_shell_cmd(cmd_prefix+"reset --hard")
@@ -97,7 +99,11 @@ def listen_for_changes(config, align_branches=False):
         print "Aligning branches..."
         align_remote_branch(config)
 
+    print "Running initial sync..."
+    run_shell_cmd(rsync_cmd)
+
+    print "Listening for changes..."
     while True:
-        run_shell_cmd(" ".join([fswatch_cmd, "| xargs -0 -I {}", rsync_cmd]), return_code=True)
+        run_shell_cmd(" ".join([fswatch_cmd, "| xargs -0 -I {} ", rsync_cmd]), return_code=True)
 
 listen_for_changes(config, align_branches=True)
